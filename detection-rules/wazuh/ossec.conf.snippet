@@ -1,0 +1,16 @@
+<!--
+  INTERLOCK RAT — Wazuh Active Response snippet
+  Source: lab manual §11.2 — append inside <ossec_config> in /var/ossec/etc/ossec.conf (Router)
+
+  When rule 100001 (PowerShell Bypass) or rule 100003 (Registry Run key persistence) fires,
+  Wazuh invokes the built-in `firewall-drop` active response to block the offending source IP
+  via iptables/nftables for 600 seconds (10 minutes).
+
+  Restart manager after edits: sudo systemctl restart wazuh-manager
+-->
+<active-response>
+  <command>firewall-drop</command>
+  <location>local</location>
+  <rules_id>100001,100003</rules_id>
+  <timeout>600</timeout>
+</active-response>

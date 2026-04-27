@@ -1,0 +1,62 @@
+<!--
+  INTERLOCK RAT Detection — Wazuh custom HIDS rules
+  Source: lab manual §5.5 — /var/ossec/etc/rules/local_rules.xml (on Router)
+
+  Lab: capsulecorp.local | Victim: Goku-mak (10.0.10.200) | Workstation: Krillin-mak (10.0.10.205)
+  Telemetry: Sysmon (SwiftOnSecurity config) on Goku-mak/Krillin-mak forwarded by Wazuh agents.
+  Restart manager after edits: sudo systemctl restart wazuh-manager
+
+  Six rules covering Execution, Ingress Tool Transfer, Persistence, System Info Discovery,
+  Remote System Discovery, and Scheduled Task abuse — each tagged with MITRE ATT&CK.
+-->
+<group name="interlock,">
+
+  <!-- PowerShell with Bypass execution policy (T1059.001) -->
+  <rule id="100001" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine">-ep Bypass|ExecutionPolicy Bypass</field>
+    <description>INTERLOCK: PowerShell with Bypass execution policy</description>
+    <mitre><id>T1059.001</id></mitre>
+  </rule>
+
+  <!-- File creation in AppData\Roaming\php (T1105) -->
+  <rule id="100002" level="12">
+    <if_group>sysmon_event11</if_group>
+    <field name="win.eventdata.targetFilename">AppData.+Roaming.+php</field>
+    <description>INTERLOCK: File created in AppData\Roaming\php (RAT staging)</description>
+    <mitre><id>T1105</id></mitre>
+  </rule>
+
+  <!-- Registry Run key persistence (T1547.001) -->
+  <rule id="100003" level="14">
+    <if_group>sysmon_event13</if_group>
+    <field name="win.eventdata.targetObject">CurrentVersion.+Run</field>
+    <description>INTERLOCK: Registry Run key modified (persistence)</description>
+    <mitre><id>T1547.001</id></mitre>
+  </rule>
+
+  <!-- Discovery with JSON output pattern (T1082) -->
+  <rule id="100004" level="10">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine">ConvertTo-Json</field>
+    <description>INTERLOCK: Discovery command with JSON exfil pattern</description>
+    <mitre><id>T1082</id></mitre>
+  </rule>
+
+  <!-- AD enumeration (T1018) -->
+  <rule id="100005" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine">adsiSearcher|nltest /dclist|net user.+/domain</field>
+    <description>INTERLOCK: Active Directory enumeration detected</description>
+    <mitre><id>T1018</id></mitre>
+  </rule>
+
+  <!-- Scheduled task deletion - dropper cleanup (T1053.005) -->
+  <rule id="100006" level="10">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine">schtasks /delete /tn Updater</field>
+    <description>INTERLOCK: Scheduled task Updater deleted (dropper behavior)</description>
+    <mitre><id>T1053.005</id></mitre>
+  </rule>
+
+</group>

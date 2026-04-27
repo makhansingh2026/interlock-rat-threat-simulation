@@ -1,0 +1,48 @@
+# ============================================================
+# Interlock RAT Threat Simulation -- .gitignore
+# Author: Makhan Singh
+# ============================================================
+
+# Secrets / credentials (NEVER commit)
+*.key
+*.pem
+*.p12
+*.pfx
+.env
+.env.*
+*secrets*
+*credentials*
+id_rsa*
+*.crt
+*.cer
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
+
+# Build artifacts and logs
+dist/
+build/
+*.log
+*.bak
+*.tmp
+
+# Lab-local capture / runtime data (not for public repo)
+loot/
+*.pcap
+*.pcapng

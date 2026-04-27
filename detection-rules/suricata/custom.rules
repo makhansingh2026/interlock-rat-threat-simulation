@@ -1,0 +1,58 @@
+# ==============================================================================
+# INTERLOCK RAT DETECTION RULES — Suricata custom ruleset
+# Source: lab manual §5.1 + §11.1 — /etc/suricata/rules/custom.rules
+#
+# Suricata config (suricata.yaml):
+#   HOME_NET     = [10.0.10.0/24]            (victim subnet)
+#   EXTERNAL_NET = !$HOME_NET                (includes attacker subnet 10.0.20.0/24)
+#   HTTP_PORTS   = 80, 8080, 8081, 3000, 8000, 8008, 8888  (8080 = Flask C2)
+#   action-order = pass → drop → reject → alert  (drop beats alert)
+#   logging      = eve.json only (no fast.log)
+#   IPS mode     = NFQUEUE queue 0 (inline inspection on the Router)
+#
+# Coverage:
+#   9 ALERT signatures  — SIDs 1000001 through 1000009 / 1000013
+#   3 DROP signatures   — SIDs 1000010, 1000011, 1000012 (added in Step 11 for IPS mode)
+# ==============================================================================
+
+# ---- ALERT RULES (initial detection) -----------------------------------------
+
+# 1. PowerShell User-Agent in HTTP (initial dropper download)
+alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"INTERLOCK - PowerShell User-Agent Detected"; http.user_agent; content:"PowerShell"; nocase; classtype:trojan-activity; sid:1000001; rev:1;)
+
+# 2. PowerShell script download (.ps1 in URI)
+alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"INTERLOCK - PowerShell Script Download (.ps1)"; http.uri; content:".ps1"; nocase; classtype:trojan-activity; sid:1000002; rev:1;)
+
+# 3. C2 command polling (GET /cmd)
+alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"INTERLOCK - C2 Command Poll (/cmd)"; http.method; content:"GET"; http.uri; content:"/cmd"; classtype:trojan-activity; sid:1000003; rev:1;)
+
+# 4. Data exfiltration (POST /exfil)
+alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"INTERLOCK - Data Exfiltration (/exfil)"; http.method; content:"POST"; http.uri; content:"/exfil"; classtype:trojan-activity; sid:1000004; rev:1;)
+
+# 5. RAT beacon check-in (POST /beacon)
+alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"INTERLOCK - RAT Beacon Check-in"; http.method; content:"POST"; http.uri; content:"/beacon"; classtype:trojan-activity; sid:1000005; rev:1;)
+
+# 6. Command result upload (POST /result)
+alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"INTERLOCK - C2 Command Result Upload"; http.method; content:"POST"; http.uri; content:"/result"; classtype:trojan-activity; sid:1000006; rev:1;)
+
+# 8. JSON POST from victim to external (general exfil pattern)
+alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"INTERLOCK - JSON POST to External"; http.method; content:"POST"; http.content_type; content:"application/json"; classtype:trojan-activity; sid:1000008; rev:1;)
+
+# 9. RDP from DC to workstation (direct cross-subnet lateral movement)
+alert tcp 10.0.10.200 any -> $HOME_NET 3389 (msg:"INTERLOCK - RDP Lateral Movement from DC"; flow:to_server,established; classtype:trojan-activity; sid:1000009; rev:1;)
+
+# 13. RDP pivot via port forward (Kali -> Goku-mak:33890 -> Krillin-mak:3389)
+# Note: flow keyword removed and rev bumped to 2 — see report Lessons Learned #3.
+alert tcp $EXTERNAL_NET any -> $HOME_NET 33890 (msg:"INTERLOCK - RDP Pivot via Port Forward"; classtype:trojan-activity; sid:1000013; rev:2;)
+
+# ==============================================================================
+# IPS DROP RULES (automated blocking — added in Step 11)
+# These take priority over ALERT rules due to action-order: pass → drop → reject → alert.
+# eve.json shows event_type: 'alert' with action: 'blocked' for matched traffic.
+# ==============================================================================
+
+drop http $HOME_NET any -> $EXTERNAL_NET any (msg:"INTERLOCK IPS - BLOCK C2 Beacon"; http.method; content:"GET"; http.uri; content:"/cmd"; classtype:trojan-activity; sid:1000010; rev:1;)
+
+drop http $HOME_NET any -> $EXTERNAL_NET any (msg:"INTERLOCK IPS - BLOCK Exfiltration"; http.method; content:"POST"; http.uri; content:"/exfil"; classtype:trojan-activity; sid:1000011; rev:1;)
+
+drop http $HOME_NET any -> $EXTERNAL_NET any (msg:"INTERLOCK IPS - BLOCK PowerShell Download"; http.user_agent; content:"PowerShell"; nocase; classtype:trojan-activity; sid:1000012; rev:1;)
