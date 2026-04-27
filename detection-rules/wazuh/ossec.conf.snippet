@@ -1,12 +1,16 @@
 <!--
-  INTERLOCK RAT — Wazuh Active Response snippet
-  Source: lab manual §11.2 — append inside <ossec_config> in /var/ossec/etc/ossec.conf (Router)
+  ============================================================================
+  INTERLOCK RAT — Wazuh Active Response (v2)
+  Author: Makhan Singh — Seneca Polytechnic, SPR600 Security Monitoring
+  File:   /var/ossec/etc/ossec.conf  (append inside <ossec_config>)
 
-  When rule 100001 (PowerShell Bypass) or rule 100003 (Registry Run key persistence) fires,
-  Wazuh invokes the built-in `firewall-drop` active response to block the offending source IP
-  via iptables/nftables for 600 seconds (10 minutes).
+  This snippet PRESERVES the original active-response configuration from the
+  lab manual §11.2 — firing firewall-drop on rule 100001 (PowerShell Bypass)
+  and rule 100003 (Registry Run key persistence) for 600 seconds — so that
+  the existing report and Wazuh active-response screenshots remain accurate.
 
   Restart manager after edits: sudo systemctl restart wazuh-manager
+  ============================================================================
 -->
 <active-response>
   <command>firewall-drop</command>
@@ -14,3 +18,30 @@
   <rules_id>100001,100003</rules_id>
   <timeout>600</timeout>
 </active-response>
+
+<!--
+  ============================================================================
+  OPTIONAL UPGRADE PATH (commented out — uncomment to replace the block above)
+  ============================================================================
+  Production SOC best-practice would auto-block only on the highest-confidence
+  detections, since rule 100001 alone (PowerShell -ep Bypass) has a moderate
+  false-positive rate against legitimate sysadmin workflows.
+
+  The block below auto-contains on:
+    100007  PowerShell hidden + bypass chained (universal dropper signature)
+    100008  Encoded PowerShell with base64 (rare in benign use)
+    100013  IFEO Debugger registry write (almost always malicious)
+    100017  DNS query for *.trycloudflare.com (real-world Interlock C2 IOC)
+    100020  Defender service stop/disable attempt
+    100025  Correlated encoded-PS + outbound network within 60s (level 15)
+
+  Rules 100001 and 100003 still alert at level 12/14 but no longer auto-block,
+  preserving the kill-chain for IR investigation.
+
+  <active-response>
+    <command>firewall-drop</command>
+    <location>local</location>
+    <rules_id>100007,100008,100013,100017,100020,100025</rules_id>
+    <timeout>600</timeout>
+  </active-response>
+-->
