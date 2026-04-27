@@ -123,9 +123,12 @@ alert http $HOME_NET any -> $EXTERNAL_NET any ( \
   sid:1000008; rev:2;)
 
 # 1000009 — RDP from DC to workstation (direct cross-subnet lateral movement)
-# v2 refinement: broadened from a single DC IP to the full server set so the
-# rule survives any DC IP change without losing detection.
-alert tcp [10.0.10.200,10.0.10.201,10.0.10.202] any -> $HOME_NET 3389 ( \
+# v2 refinement: kept the single-DC source (10.0.10.200 = Goku-mak) but added
+# flow:established,to_server tracking + MITRE metadata. Note: in this lab the
+# port-forward pivot keeps Goku-mak->Krillin-mak traffic intra-subnet, so this
+# rule will not fire (Lessons Learned #4 in the report). It remains in place
+# for defensive coverage if future scenarios add cross-subnet RDP.
+alert tcp 10.0.10.200 any -> $HOME_NET 3389 ( \
   msg:"INTERLOCK - RDP Lateral Movement from DC"; \
   flow:established,to_server; \
   classtype:trojan-activity; \
@@ -315,7 +318,9 @@ drop tls $HOME_NET any -> $EXTERNAL_NET any ( \
   sid:1000023; rev:1;)
 
 # 1000024 — DROP: Reverse RDP from server/DC to workstation
-drop tcp [10.0.10.200,10.0.10.201,10.0.10.202] any -> $HOME_NET 3389 ( \
+# Same caveat as 1000009: will not fire in the current lab because of the
+# intra-subnet port-forward pivot. Kept for production-style coverage.
+drop tcp 10.0.10.200 any -> $HOME_NET 3389 ( \
   msg:"INTERLOCK IPS - BLOCK Reverse RDP from Server/DC"; \
   flow:established,to_server; \
   classtype:trojan-activity; \

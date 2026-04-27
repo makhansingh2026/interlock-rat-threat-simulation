@@ -252,12 +252,15 @@
        NEW IN V2 — LATERAL MOVEMENT (T1021, T1570)
        ====================================================================== -->
 
-  <!-- 100022 — Successful remote interactive logon (RDP) — Win Event 4624 type 10 -->
+  <!-- 100022 — Successful remote logon (RDP) — Win Event 4624 type 3 or 10
+       Type 10 = RemoteInteractive (NLA enabled, normal RDP)
+       Type 3  = Network (this lab — NLA disabled per Lessons Learned #2; sdl-freerdp3
+                 to a host with UserAuthentication=0 produces a Type 3 logon) -->
   <rule id="100022" level="9">
     <if_group>windows_security</if_group>
     <field name="win.eventdata.eventID">^4624$</field>
-    <field name="win.eventdata.logonType">^10$</field>
-    <description>INTERLOCK: Successful remote interactive logon (RDP) — review against baseline</description>
+    <field name="win.eventdata.logonType">^(3|10)$</field>
+    <description>INTERLOCK: Successful remote logon (RDP) — review against baseline</description>
     <mitre><id>T1021.001</id></mitre>
     <group>lateral_movement,authentication,</group>
   </rule>

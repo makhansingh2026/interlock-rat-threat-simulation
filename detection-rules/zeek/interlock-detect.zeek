@@ -56,7 +56,9 @@ export {
     };
 
     ## Internal servers / DCs that should never initiate RDP toward workstations.
-    const dc_servers: set[addr] = { 10.0.10.200, 10.0.10.201, 10.0.10.202 } &redef;
+    ## Lab has only one DC (Goku-mak = 10.0.10.200). Add additional servers as
+    ## the environment grows.
+    const dc_servers: set[addr] = { 10.0.10.200 } &redef;
 }
 
 # ----------------------------------------------------------------------
