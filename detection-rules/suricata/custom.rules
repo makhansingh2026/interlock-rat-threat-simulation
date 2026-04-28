@@ -3,20 +3,6 @@
 # Author: Makhan Singh — Seneca Polytechnic, SPR600 Security Monitoring
 # File:   /etc/suricata/rules/custom.rules
 # ==============================================================================
-# What changed in v2
-# ------------------
-# Original SIDs 1000001-1000013 are PRESERVED with their exact original msg
-# strings so the existing lab manual, project report, and dashboards still
-# reference accurate rule numbers. The internal logic of each rule has been
-# refined with industry best-practices (flow tracking, MITRE metadata, threat
-# intel references, thresholds where appropriate) without changing what each
-# rule conceptually catches.
-#
-# v2 also adds 11 new rules (SIDs 1000007 and 1000014-1000024) that detect the
-# real-world KongTuke -> Interlock RAT campaign (The DFIR Report, July 2025)
-# rather than only the lab paths. The single highest-value addition is
-# Cloudflare Tunnel detection (.trycloudflare.com), the actual C2 channel used
-# by the in-the-wild variant.
 #
 # Suricata environment
 # --------------------
@@ -35,15 +21,14 @@
 #
 # Coverage
 # --------
-#   Original alerts  : 1000001-1000006, 1000008, 1000009, 1000013
-#   Original drops   : 1000010, 1000011, 1000012
-#   New alerts (v2)  : 1000007, 1000014-1000022
-#   New drops  (v2)  : 1000023, 1000024
+# alerts  : 1000001-1000006, 1000008, 1000009, 1000013
+# drops   : 1000010, 1000011, 1000012
+
 # ==============================================================================
 
 
 # ==============================================================================
-# ORIGINAL ALERT RULES (SIDs preserved, msg preserved, logic refined)
+# ALERT RULES 
 # ==============================================================================
 
 # 1000001 — PowerShell User-Agent in HTTP (initial dropper download)
@@ -153,7 +138,7 @@ alert tcp $EXTERNAL_NET any -> $HOME_NET ![3389] ( \
 
 
 # ==============================================================================
-# ORIGINAL IPS DROP RULES (SIDs preserved, msg preserved, logic refined)
+# IPS DROP RULES 
 # ==============================================================================
 
 # 1000010 — DROP: lab Flask C2 command channel
@@ -185,144 +170,3 @@ drop http $HOME_NET any -> $EXTERNAL_NET any ( \
   metadata:mitre_attack_id T1059.001, signature_severity Major, deployment Perimeter, confidence High; \
   sid:1000012; rev:2;)
 
-
-# ==============================================================================
-# NEW IN V2 — TECHNIQUE-BASED DETECTIONS (real-world Interlock IOCs)
-# These add detection coverage that the v1 ruleset did not have. They detect
-# the actual KongTuke -> Interlock RAT campaign as observed in the wild, not
-# just the lab paths used for this simulation.
-# ==============================================================================
-
-# 1000007 — Script download from a bare-IP host (no DNS = suspicious)
-# Real users almost never type raw IPs; malware droppers often do.
-alert http $HOME_NET any -> $EXTERNAL_NET any ( \
-  msg:"INTERLOCK - Script Download from Bare IP Host Header"; \
-  flow:established,to_server; \
-  http.method; content:"GET"; \
-  http.host; pcre:"/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/"; \
-  http.uri; pcre:"/\.(ps1|hta|vbs|js|exe|dll|bat|cmd)(\?|$)/i"; \
-  classtype:trojan-activity; \
-  metadata:mitre_attack_id T1105, mitre_attack_tactic Command-and-Control, signature_severity Major, deployment Perimeter, confidence High; \
-  sid:1000007; rev:1;)
-
-# 1000014 — PowerShell IEX downloader pattern in HTTP response body
-alert http $EXTERNAL_NET any -> $HOME_NET any ( \
-  msg:"INTERLOCK - PowerShell IEX Downloader Pattern in HTTP Response"; \
-  flow:established,to_client; \
-  file.data; content:"IEX"; nocase; \
-  file.data; content:"New-Object"; nocase; distance:0; within:200; \
-  file.data; content:"Net.WebClient"; nocase; distance:0; within:200; \
-  classtype:trojan-activity; \
-  reference:url,attack.mitre.org/techniques/T1059/001/; \
-  metadata:mitre_attack_id T1059.001, mitre_attack_tactic Execution, signature_severity Major, deployment Perimeter, confidence High; \
-  sid:1000014; rev:1;)
-
-# 1000015 — PowerShell encoded command on the wire (-enc / -EncodedCommand)
-alert http any any -> any any ( \
-  msg:"INTERLOCK - PowerShell Encoded Command Switch in HTTP Stream"; \
-  flow:established; \
-  pcre:"/-(?:e|en|enc|enco|encod|encode|encoded[Cc]ommand)\s+[A-Za-z0-9+\/=]{30,}/"; \
-  classtype:trojan-activity; \
-  reference:url,attack.mitre.org/techniques/T1027/; \
-  metadata:mitre_attack_id T1027, mitre_attack_tactic Defense-Evasion, signature_severity Major, deployment Perimeter, confidence High; \
-  sid:1000015; rev:1;)
-
-# 1000016 — PowerShell hidden window + execution policy bypass arguments
-alert http $EXTERNAL_NET any -> $HOME_NET any ( \
-  msg:"INTERLOCK - PowerShell Hidden + Bypass Arguments in HTTP Body"; \
-  flow:established,to_client; \
-  file.data; content:"powershell"; nocase; \
-  file.data; pcre:"/-w(?:indowstyle)?\s+hidden/i"; \
-  file.data; pcre:"/-e(?:xecutionpolicy)?\s*p?\s*bypass/i"; \
-  classtype:trojan-activity; \
-  reference:url,attack.mitre.org/techniques/T1562/; \
-  metadata:mitre_attack_id T1562, mitre_attack_tactic Defense-Evasion, signature_severity Major, deployment Perimeter, confidence High; \
-  sid:1000016; rev:1;)
-
-# 1000017 — DNS query for Cloudflare Tunnel (.trycloudflare.com)
-# Highest-value real-world Interlock IOC. Active campaigns rotate these
-# subdomains weekly.
-alert dns $HOME_NET any -> any any ( \
-  msg:"INTERLOCK - DNS Query for Cloudflare Tunnel (trycloudflare.com)"; \
-  dns.query; content:".trycloudflare.com"; nocase; endswith; \
-  classtype:trojan-activity; \
-  reference:url,thedfirreport.com/2025/07/14/kongtuke-filefix-leads-to-new-interlock-rat-variant/; \
-  reference:url,attack.mitre.org/techniques/T1090/004/; \
-  metadata:mitre_attack_id T1090.004, mitre_attack_tactic Command-and-Control, signature_severity Major, deployment Perimeter, confidence Medium; \
-  sid:1000017; rev:1;)
-
-# 1000018 — TLS SNI for Cloudflare Tunnel (.trycloudflare.com)
-alert tls $HOME_NET any -> $EXTERNAL_NET any ( \
-  msg:"INTERLOCK - TLS SNI for Cloudflare Tunnel (trycloudflare.com)"; \
-  flow:established,to_server; \
-  tls.sni; content:".trycloudflare.com"; nocase; endswith; \
-  classtype:trojan-activity; \
-  reference:url,thedfirreport.com/2025/07/14/kongtuke-filefix-leads-to-new-interlock-rat-variant/; \
-  metadata:mitre_attack_id T1090.004, mitre_attack_tactic Command-and-Control, signature_severity Major, deployment Perimeter, confidence Medium; \
-  sid:1000018; rev:1;)
-
-# 1000019 — TLS SNI for Cloudflare Workers (.workers.dev) — lower confidence
-alert tls $HOME_NET any -> $EXTERNAL_NET any ( \
-  msg:"INTERLOCK - TLS SNI for Cloudflare Workers (workers.dev)"; \
-  flow:established,to_server; \
-  tls.sni; content:".workers.dev"; nocase; endswith; \
-  classtype:trojan-activity; \
-  metadata:mitre_attack_id T1071.001, mitre_attack_tactic Command-and-Control, signature_severity Minor, deployment Perimeter, confidence Low; \
-  sid:1000019; rev:1;)
-
-# 1000020 — Impacket / PsExec service install over SMB (lateral movement)
-alert smb $HOME_NET any -> $HOME_NET any ( \
-  msg:"INTERLOCK - Impacket/PsExec Service Install via SMB"; \
-  flow:established,to_server; \
-  content:"PSEXESVC"; nocase; \
-  classtype:trojan-activity; \
-  reference:url,attack.mitre.org/techniques/T1021/002/; \
-  metadata:mitre_attack_id T1021.002, mitre_attack_tactic Lateral-Movement, signature_severity Major, deployment Internal, confidence High; \
-  sid:1000020; rev:1;)
-
-# 1000021 — Large outbound HTTP POST from a workstation (potential exfil)
-alert http $HOME_NET any -> $EXTERNAL_NET any ( \
-  msg:"INTERLOCK - Large HTTP POST from Internal Host (potential exfil)"; \
-  flow:established,to_server; \
-  http.method; content:"POST"; \
-  http.request_body; dsize:>1048576; \
-  threshold: type limit, track by_src, count 1, seconds 600; \
-  classtype:trojan-activity; \
-  reference:url,attack.mitre.org/techniques/T1041/; \
-  metadata:mitre_attack_id T1041, mitre_attack_tactic Exfiltration, signature_severity Minor, deployment Perimeter, confidence Low; \
-  sid:1000021; rev:1;)
-
-# 1000022 — Outbound archive/loot upload over HTTP
-alert http $HOME_NET any -> $EXTERNAL_NET any ( \
-  msg:"INTERLOCK - Compressed Archive Upload from Internal Host"; \
-  flow:established,to_server; \
-  http.method; content:"POST"; \
-  http.uri; pcre:"/\.(zip|rar|7z|tar\.gz|tgz)(\?|$)/i"; \
-  classtype:trojan-activity; \
-  reference:url,attack.mitre.org/techniques/T1567/; \
-  metadata:mitre_attack_id T1567, mitre_attack_tactic Exfiltration, signature_severity Major, deployment Perimeter, confidence Medium; \
-  sid:1000022; rev:1;)
-
-
-# ==============================================================================
-# NEW IN V2 — IPS DROP RULES
-# ==============================================================================
-
-# 1000023 — DROP: Cloudflare Tunnel C2 egress
-drop tls $HOME_NET any -> $EXTERNAL_NET any ( \
-  msg:"INTERLOCK IPS - BLOCK Cloudflare Tunnel C2"; \
-  flow:established,to_server; \
-  tls.sni; content:".trycloudflare.com"; nocase; endswith; \
-  classtype:trojan-activity; \
-  metadata:mitre_attack_id T1090.004, signature_severity Major, deployment Perimeter, confidence Medium; \
-  sid:1000023; rev:1;)
-
-# 1000024 — DROP: Reverse RDP from server/DC to workstation
-# Same caveat as 1000009: will not fire in the current lab because of the
-# intra-subnet port-forward pivot. Kept for production-style coverage.
-drop tcp 10.0.10.200 any -> $HOME_NET 3389 ( \
-  msg:"INTERLOCK IPS - BLOCK Reverse RDP from Server/DC"; \
-  flow:established,to_server; \
-  classtype:trojan-activity; \
-  metadata:mitre_attack_id T1021.001, signature_severity Major, deployment Internal, confidence High; \
-  sid:1000024; rev:1;)
