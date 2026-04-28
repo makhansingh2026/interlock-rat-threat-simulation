@@ -1,4 +1,4 @@
-##! Interlock RAT Detection — Zeek site script (v2)
+##! Interlock RAT Detection — Zeek site script 
 ##! Author: Makhan Singh — Seneca Polytechnic, SPR600 Security Monitoring
 ##! File:   /opt/zeek/share/zeek/site/interlock-detect.zeek
 ##!
@@ -14,7 +14,7 @@ module InterlockDetect;
 
 export {
     redef enum Notice::Type += {
-        ## --- Notice types (names PRESERVED for backward compatibility) ---
+        ## --- Notice types  ---
         Interlock_C2_Beacon,         # GET /cmd  (lab Flask C2)
         Interlock_Data_Exfil,        # POST /exfil  (lab Flask C2)
         Interlock_PS_Download,       # .ps1 in URI
@@ -56,13 +56,13 @@ event http_request(c: connection, method: string, original_URI: string,
                 $msg=fmt("PowerShell download: %s -> %s", c$id$orig_h, original_URI),
                 $conn=c]);
 
-    # lab Flask C2 — POST /beacon (not covered in v1)
+    # lab Flask C2 — POST /beacon 
     if (method == "POST" && /\/beacon/ in original_URI)
         NOTICE([$note=Interlock_Lab_C2_Beacon_Post,
                 $msg=fmt("Lab C2 beacon: %s -> %s", c$id$orig_h, original_URI),
                 $conn=c, $identifier=cat(c$id$orig_h)]);
 
-    # lab Flask C2 — POST /result (not covered in v1)
+    # lab Flask C2 — POST /result 
     if (method == "POST" && /\/result/ in original_URI)
         NOTICE([$note=Interlock_Lab_C2_Result,
                 $msg=fmt("Lab C2 result: %s -> %s", c$id$orig_h, original_URI),
