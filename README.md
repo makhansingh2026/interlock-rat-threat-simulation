@@ -30,11 +30,10 @@
 11. [Wazuh SIEM Dashboard](#11-wazuh-siem-dashboard)
 12. [Detection Coverage Summary](#12-detection-coverage-summary)
 13. [Key Metrics](#13-key-metrics)
-14. [Lessons Learned](#14-lessons-learned)
-15. [Skills Demonstrated](#15-skills-demonstrated)
-16. [Tech Stack](#16-tech-stack)
-17. [Repository Structure](#17-repository-structure)
-18. [Disclaimer](#18-disclaimer)
+14. [Skills Demonstrated](#15-skills-demonstrated)
+15. [Tech Stack](#16-tech-stack)
+16. [Repository Structure](#17-repository-structure)
+17. [Disclaimer](#18-disclaimer)
 
 ---
 
@@ -703,24 +702,6 @@ All custom Suricata signatures (9 alert + 3 DROP), all Zeek notice types (6), an
 | IPS BLOCK events | 3 |
 | RAT Beacon check-ins | 2 |
 | Data Exfiltration events | 2 |
-
-## 14. Lessons Learned
-
-Seven non-obvious problems surfaced during the build and were resolved in place. Each is captured here because they are the kind of practical detail that distinguishes an as-deployed pipeline from a textbook architecture.
-
-**1. RDP registry changes require a reboot.** Setting `fDenyTSConnections=0` on Krillin-mak did not immediately open port 3389; the Terminal Services listener only activated after a full reboot. Confirmed with `netstat -an | findstr 3389` before/after.
-
-**2. NLA blocks third-party RDP clients.** Network Level Authentication on Krillin-mak caused `connection reset by peer` errors from `sdl-freerdp3`. Setting `UserAuthentication=0` in the `RDP-Tcp` registry key resolved it.
-
-**3. Suricata `flow:to_server,established` blocked SID 1000013.** The initial RDP-pivot rule never fired because of the flow keyword. Removing it and bumping `rev:2` fixed the rule. The final v3 of the rule was generalised further to detect RDP on any non-3389 port via the X.224 / mstshash cookie pattern.
-
-**4. Intra-subnet RDP bypasses Suricata.** SID 1000009 (RDP to 3389) didn't fire for the second pivot leg because the Goku-mak → Krillin-mak segment stays inside `10.0.10.0/24` and never traverses the router. SID 1000013 (port 33890) catches the ingress leg from Kali through the router, and Wazuh rule 92657 catches the host-side logon - together the two layers close the gap.
-
-**5. Zeek logs are JSON, not TSV.** The first evidence-collection commands used `zeek-cut`, which requires Zeek's legacy TSV format. The lab uses JSON-formatted logs, so all queries were rewritten to use `jq` with bracket notation for dotted field names; archived `.gz` logs use `zcat | jq`.
-
-**6. Wazuh `jq` rule-ID comparison is alphabetic.** The initial alert export used `>= "100001"` and produced wrong results because `jq` compares strings alphabetically, not numerically. Switched to exact match / regex filtering.
-
-**7. UAC prevents C2-driven port forwarding.** `netsh interface portproxy` requires elevation, but the simulated RAT runs as a standard user. The pivot was configured directly from an elevated PowerShell session on Goku-mak; a real attacker would have to escalate first.
 
 ## 15. Skills Demonstrated
 
