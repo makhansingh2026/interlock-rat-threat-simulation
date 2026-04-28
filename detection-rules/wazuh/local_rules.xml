@@ -3,27 +3,6 @@
   INTERLOCK RAT Detection — Wazuh custom HIDS rules (v2)
   Author: Makhan Singh — Seneca Polytechnic, SPR600 Security Monitoring
   File:   /var/ossec/etc/rules/local_rules.xml
-
-  What changed in v2
-  ------------------
-  Original rule IDs 100001-100006 are PRESERVED with their original level,
-  description text, and field matchers, so the existing lab manual, project
-  report, and Wazuh dashboards still reference accurate rule numbers and
-  alert text. The only change to those six rules is the addition of a
-  <group> tag for SOC dashboarding.
-
-  v2 also adds 18 new rules (100007-100025) that detect the real-world
-  KongTuke -> Interlock RAT campaign documented by The DFIR Report (July 2025)
-  rather than only the lab artefacts. The single highest-value addition is
-  rule 100017 (DNS query to *.trycloudflare.com) — the actual C2 channel
-  used by the in-the-wild Interlock variant.
-
-  Telemetry
-  ---------
-  Sysmon (SwiftOnSecurity config) on Goku-mak / Krillin-mak / DC, forwarded
-  via Wazuh agent to the manager. Restart manager after edits:
-    sudo systemctl restart wazuh-manager
-
   Reference: https://thedfirreport.com/2025/07/14/kongtuke-filefix-leads-to-new-interlock-rat-variant/
   ============================================================================
 -->
