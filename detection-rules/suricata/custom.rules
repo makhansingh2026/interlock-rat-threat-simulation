@@ -104,20 +104,6 @@ alert http $HOME_NET any -> $EXTERNAL_NET any ( \
   metadata:mitre_attack_id T1071.001, mitre_attack_tactic Command-and-Control, signature_severity Minor, deployment Perimeter, confidence Low; \
   sid:1000008; rev:2;)
 
-# 1000009 — RDP from DC to workstation (direct cross-subnet lateral movement)
-# v2 refinement: kept the single-DC source (10.0.10.200 = Goku-mak) but added
-# flow:established,to_server tracking + MITRE metadata. Note: in this lab the
-# port-forward pivot keeps Goku-mak->Krillin-mak traffic intra-subnet, so this
-# rule will not fire (Lessons Learned #4 in the report). It remains in place
-# for defensive coverage if future scenarios add cross-subnet RDP.
-alert tcp 10.0.10.200 any -> $HOME_NET 3389 ( \
-  msg:"INTERLOCK - RDP Lateral Movement from DC"; \
-  flow:established,to_server; \
-  classtype:trojan-activity; \
-  reference:url,attack.mitre.org/techniques/T1021/001/; \
-  metadata:mitre_attack_id T1021.001, mitre_attack_tactic Lateral-Movement, signature_severity Major, deployment Internal, confidence High; \
-  sid:1000009; rev:2;)
-
 # 1000013 — RDP pivot via port forward
 # v2 refinement: original rule hardcoded port 33890. New version detects RDP
 # negotiated on ANY non-3389 port via the X.224 / mstshash cookie pattern, so
