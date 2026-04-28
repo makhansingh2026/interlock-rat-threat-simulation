@@ -703,15 +703,15 @@ All custom Suricata signatures (9 alert + 3 DROP), all Zeek notice types (6), an
 | RAT Beacon check-ins | 2 |
 | Data Exfiltration events | 2 |
 
-## 15. Skills Demonstrated
+## 14. Skills Demonstrated
 
 Detection Engineering · Threat Emulation · MITRE ATT&CK Mapping · Network Forensics · IDS/IPS Rule Writing · SIEM Engineering & Dashboarding · Active Directory Security · Lateral Movement Detection · Sysmon & Windows Event Log Analysis · PowerShell Tradecraft · Python (Flask) · Bash Automation · Incident Response Workflow.
 
-## 16. Tech Stack
+## 15. Tech Stack
 
 Suricata 7.0.3 · Zeek NSM · Wazuh 4.14.2 · Sysmon (SwiftOnSecurity config) · OpenSearch Dashboards · Ubuntu 24.04 · Windows Server 2019 · Windows 10 Pro · Kali Linux · Flask · PowerShell · nftables / NFQUEUE.
 
-## 17. Repository Structure
+## 16. Repository Structure
 
 ```
 interlock-rat-threat-simulation/
@@ -735,7 +735,7 @@ interlock-rat-threat-simulation/
     └── alert_monitor.sh                 (real-time eve.json INTERLOCK parser)
 ```
 
-## 18. Disclaimer
+## 17. Disclaimer
 
 > ⚠️ This project was conducted entirely within an isolated VMware lab environment for educational purposes as part of SPR600 Security Monitoring at Seneca Polytechnic. All malware, C2 infrastructure, and attack tooling shown here is simulated and intended only for defensive research and detection engineering practice. Do not deploy any code from this repository against systems you do not own or have explicit authorization to test.
 
